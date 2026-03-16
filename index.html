@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 March Madness Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --court: #1a1a2e;
+    --panel: #16213e;
+    --card: #0f3460;
+    --accent: #e94560;
+    --gold: #f5a623;
+    --green: #00b894;
+    --blue: #0984e3;
+    --text: #eaeaea;
+    --muted: #8892a4;
+    --border: rgba(255,255,255,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--court);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 0 0 60px 0;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #0f3460 0%, #1a1a2e 60%, #16213e 100%);
+    border-bottom: 3px solid var(--accent);
+    padding: 32px 48px 24px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .header-left h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    letter-spacing: 3px;
+    color: #fff;
+    line-height: 1;
+  }
+  .header-left h1 span { color: var(--accent); }
+  .header-left p {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 6px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .header-stats {
+    display: flex;
+    gap: 32px;
+  }
+  .hstat {
+    text-align: center;
+  }
+  .hstat-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .hstat-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  /* LAYOUT */
+  .container { padding: 32px 48px; }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--gold));
+  }
+  .card-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* REGION CARDS */
+  .region-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+  .region-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+  .region-avg {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .region-sub { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* UPSET ALERTS */
+  .alert-card {
+    background: var(--panel);
+    border: 1px solid rgba(233,69,96,0.3);
+    border-left: 4px solid var(--accent);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .alert-seed {
+    background: var(--accent);
+    color: #fff;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .alert-info { flex: 1; }
+  .alert-school { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+  .alert-region { font-size: 12px; color: var(--muted); }
+  .alert-stats { display: flex; gap: 16px; }
+  .alert-stat { text-align: center; }
+  .alert-stat-val { font-weight: 600; font-size: 14px; color: var(--gold); }
+  .alert-stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .alert-rank {
+    background: rgba(0,184,148,0.15);
+    border: 1px solid var(--green);
+    color: var(--green);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* TABLE */
+  .rankings-table { width: 100%; border-collapse: collapse; }
+  .rankings-table th {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .rankings-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .rankings-table tr:hover td { background: rgba(255,255,255,0.03); }
+  .rank-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    color: var(--muted);
+    width: 36px;
+  }
+  .rank-num.top3 { color: var(--gold); }
+  .school-name { font-weight: 500; }
+  .seed-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(255,255,255,0.08);
+    color: var(--text);
+  }
+  .seed-badge.s1 { background: rgba(245,166,35,0.25); color: var(--gold); }
+  .seed-badge.s2 { background: rgba(9,132,227,0.25); color: var(--blue); }
+  .seed-badge.s3 { background: rgba(0,184,148,0.2); color: var(--green); }
+  .cps-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .cps-bar {
+    height: 6px; border-radius: 3px;
+    background: linear-gradient(90deg, var(--blue), var(--accent));
+    min-width: 4px;
+  }
+  .cps-val { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  /* Overseeded */
+  .over-badge {
+    background: rgba(233,69,96,0.15);
+    border: 1px solid rgba(233,69,96,0.4);
+    color: var(--accent);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+  }
+
+  /* Chart containers */
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* Region label colors */
+  .r-east { color: #74b9ff; }
+  .r-west { color: #55efc4; }
+  .r-midwest { color: #fdcb6e; }
+  .r-south { color: #fd79a8; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>2026 MARCH MADNESS<br><span>ANALYTICS DASHBOARD</span></h1>
+    <p>Composite Performance Score Model &nbsp;·&nbsp; 68 Teams &nbsp;·&nbsp; Selection Sunday 2026</p>
+  </div>
+  <div class="header-stats">
+    <div class="hstat">
+      <div class="hstat-val">68</div>
+      <div class="hstat-label">Teams</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val">5</div>
+      <div class="hstat-label">Upset Alerts</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val">828</div>
+      <div class="hstat-label">Top CPS (Michigan)</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val">1</div>
+      <div class="hstat-label">Overseeded (Kansas)</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- REGION AVERAGES -->
+  <div class="section-title">Region Strength by Avg CPS</div>
+  <div class="grid-4" style="margin-bottom:28px">
+    <div class="region-card">
+      <div class="region-name r-west">West</div>
+      <div class="region-avg" style="color:#55efc4">365.7</div>
+      <div class="region-sub">Avg CPS</div>
+    </div>
+    <div class="region-card">
+      <div class="region-name r-east">East</div>
+      <div class="region-avg" style="color:#74b9ff">364.9</div>
+      <div class="region-sub">Avg CPS</div>
+    </div>
+    <div class="region-card">
+      <div class="region-name r-midwest">Midwest</div>
+      <div class="region-avg" style="color:#fdcb6e">343.2</div>
+      <div class="region-sub">Avg CPS</div>
+    </div>
+    <div class="region-card">
+      <div class="region-name r-south">South</div>
+      <div class="region-avg" style="color:#fd79a8">317.3</div>
+      <div class="region-sub">Avg CPS</div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Top 20 Teams by CPS Score</div>
+      <div class="chart-wrap" style="height:420px">
+        <canvas id="barChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Seed vs CPS Rank — Divergence = Opportunity</div>
+      <div class="chart-wrap" style="height:420px">
+        <canvas id="scatterChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- UPSET ALERTS -->
+  <div class="section-title">⚠️ Upset Alert System — Underseeded Teams</div>
+  <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:28px">
+
+    <div class="alert-card">
+      <div class="alert-seed">6</div>
+      <div class="alert-info">
+        <div class="alert-school">Louisville</div>
+        <div class="alert-region">East Region · 6 Seed</div>
+      </div>
+      <div class="alert-stats">
+        <div class="alert-stat"><div class="alert-stat-val">23.4</div><div class="alert-stat-label">SRS</div></div>
+        <div class="alert-stat"><div class="alert-stat-val">10.8</div><div class="alert-stat-label">SOS</div></div>
+        <div class="alert-stat"><div class="alert-stat-val">69.7%</div><div class="alert-stat-label">WinPct</div></div>
+      </div>
+      <div class="alert-rank">CPS Rank #11<br><span style="font-size:10px;font-weight:400">Model says top-10 team</span></div>
+    </div>
+
+    <div class="alert-card">
+      <div class="alert-seed">5</div>
+      <div class="alert-info">
+        <div class="alert-school">Vanderbilt</div>
+        <div class="alert-region">South Region · 5 Seed</div>
+      </div>
+      <div class="alert-stats">
+        <div class="alert-stat"><div class="alert-stat-val">23.2</div><div class="alert-stat-label">SRS</div></div>
+        <div class="alert-stat"><div class="alert-stat-val">11.4</div><div class="alert-stat-label">SOS</div></div>
+        <div class="alert-stat"><div class="alert-stat-val">78.8%</div><div class="alert-stat-label">WinPct</div></div>
+      </div>
+      <div class="alert-rank">CPS Rank #12<br><span style="font-size:10px;font-weight:400">Model says top-10 team</span></div>
+    </div>
+
+    <div class="alert-card">
+      <div class="alert-seed">5</div>
+      <div class="alert-info">
+        <div class="alert-school">St. John's (NY)</div>
+        <div class="alert-region">East Region · 5 Seed</div>
+      </div>
+      <div class="alert-stats">
+        <div class="alert-stat"><div class="alert-stat-val">22.4</div><div class="alert-stat-label">SRS</div></div>
+        <div class="alert-stat"><div class="alert-stat-val">10.8</div><div class="alert-stat-label">SOS</div></div>
+        <div class="alert-stat"><div class="alert-stat-val">82.4%</div><div class="alert-stat-label">WinPct</div></div>
+      </div>
+      <div class="alert-rank">CPS Rank #15<br><span style="font-size:10px;font-weight:400">28-6 record undervalued</span></div>
+    </div>
+
+    <div class="alert-card">
+      <div class="alert-seed">6</div>
+      <div class="alert-info">
+        <div class="alert-school">Tennessee</div>
+        <div class="alert-region">Midwest Region · 6 Seed</div>
+      </div>
+      <div class="alert-stats">
+        <div class="alert-stat"><div class="alert-stat-val">22.1</div><div class="alert-stat-label">SRS</div></div>
+        <div class="alert-stat"><div class="alert-stat-val">12.0</div><div class="alert-stat-label">SOS</div></div>
+        <div class="alert-stat"><div class="alert-stat-val">66.7%</div><div class="alert-stat-label">WinPct</div></div>
+      </div>
+      <div class="alert-rank">CPS Rank #16<br><span style="font-size:10px;font-weight:400">Elite SOS, tough draw</span></div>
+    </div>
+
+    <div class="alert-card">
+      <div class="alert-seed">5</div>
+      <div class="alert-info">
+        <div class="alert-school">Texas Tech</div>
+        <div class="alert-region">Midwest Region · 5 Seed</div>
+      </div>
+      <div class="alert-stats">
+        <div class="alert-stat"><div class="alert-stat-val">21.9</div><div class="alert-stat-label">SRS</div></div>
+        <div class="alert-stat"><div class="alert-stat-val">14.2</div><div class="alert-stat-label">SOS</div></div>
+        <div class="alert-stat"><div class="alert-stat-val">68.8%</div><div class="alert-stat-label">WinPct</div></div>
+      </div>
+      <div class="alert-rank">CPS Rank #18<br><span style="font-size:10px;font-weight:400">Highest SOS of any alert</span></div>
+    </div>
+
+  </div>
+
+  <!-- FULL RANKINGS TABLE -->
+  <div class="section-title">Full CPS Rankings — All 68 Teams</div>
+  <div class="card" style="padding:0; overflow:hidden;">
+    <div style="overflow-x:auto">
+    <table class="rankings-table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>School</th>
+          <th>Region</th>
+          <th>Seed</th>
+          <th>CPS Score</th>
+          <th>SRS</th>
+          <th>SOS</th>
+          <th>WinPct</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody id="rankTable"></tbody>
+    </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const teams = [
+  {rank:1,school:"Michigan",region:"Midwest",seed:1,cps:828.8,srs:32.9,sos:14.5,winpct:.939,alert:false},
+  {rank:2,school:"Duke",region:"East",seed:1,cps:796.3,srs:31.6,sos:12.4,winpct:.941,alert:false},
+  {rank:3,school:"Arizona",region:"West",seed:1,cps:754.0,srs:29.9,sos:12.6,winpct:.941,alert:false},
+  {rank:4,school:"Florida",region:"South",seed:1,cps:704.2,srs:27.9,sos:13.1,winpct:.788,alert:false},
+  {rank:5,school:"Iowa State",region:"Midwest",seed:2,cps:685.6,srs:27.2,sos:10.5,winpct:.794,alert:false},
+  {rank:6,school:"Illinois",region:"South",seed:3,cps:668.5,srs:26.5,sos:11.9,winpct:.750,alert:false},
+  {rank:7,school:"Houston",region:"South",seed:2,cps:660.9,srs:26.2,sos:11.9,winpct:.824,alert:false},
+  {rank:8,school:"Purdue",region:"West",seed:2,cps:635.9,srs:25.2,sos:13.6,winpct:.765,alert:false},
+  {rank:9,school:"Gonzaga",region:"West",seed:3,cps:632.9,srs:25.1,sos:6.0,winpct:.909,alert:false},
+  {rank:10,school:"Michigan State",region:"East",seed:3,cps:593.5,srs:23.5,sos:12.9,winpct:.781,alert:false},
+  {rank:11,school:"Louisville",region:"East",seed:6,cps:590.7,srs:23.4,sos:10.8,winpct:.697,alert:true},
+  {rank:12,school:"Vanderbilt",region:"South",seed:5,cps:585.7,srs:23.2,sos:11.4,winpct:.788,alert:true},
+  {rank:13,school:"Connecticut",region:"East",seed:2,cps:578.0,srs:22.9,sos:10.6,winpct:.853,alert:false},
+  {rank:14,school:"Alabama",region:"Midwest",seed:4,cps:574.0,srs:22.7,sos:14.4,winpct:.719,alert:false},
+  {rank:15,school:"St. John's (NY)",region:"East",seed:5,cps:565.9,srs:22.4,sos:10.8,winpct:.824,alert:true},
+  {rank:16,school:"Tennessee",region:"Midwest",seed:6,cps:558.8,srs:22.1,sos:12.0,winpct:.667,alert:true},
+  {rank:17,school:"Arkansas",region:"West",seed:4,cps:558.4,srs:22.1,sos:12.3,winpct:.758,alert:false},
+  {rank:18,school:"Texas Tech",region:"Midwest",seed:5,cps:553.5,srs:21.9,sos:14.2,winpct:.688,alert:true},
+  {rank:19,school:"Virginia",region:"Midwest",seed:3,cps:545.7,srs:21.6,sos:9.4,winpct:.853,alert:false},
+  {rank:20,school:"Nebraska",region:"South",seed:4,cps:542.9,srs:21.5,sos:10.5,winpct:.813,alert:false},
+  {rank:21,school:"Kansas",region:"East",seed:4,cps:533.8,srs:21.1,sos:14.9,winpct:.697,over:true},
+  {rank:22,school:"Brigham Young",region:"West",seed:6,cps:531.0,srs:21.0,sos:12.5,winpct:.676,alert:false},
+  {rank:23,school:"Kentucky",region:"Midwest",seed:7,cps:501.0,srs:19.8,sos:12.9,winpct:.618,alert:false},
+  {rank:24,school:"Georgia",region:"Midwest",seed:8,cps:495.5,srs:19.6,sos:8.9,winpct:.688,alert:false},
+  {rank:25,school:"Wisconsin",region:"West",seed:5,cps:493.2,srs:19.5,sos:12.4,winpct:.706,alert:false},
+  {rank:26,school:"North Carolina",region:"South",seed:6,cps:490.6,srs:19.4,sos:10.9,winpct:.750,alert:false},
+  {rank:27,school:"Ohio State",region:"East",seed:8,cps:482.8,srs:19.1,sos:12.1,winpct:.636,alert:false},
+  {rank:28,school:"Iowa",region:"South",seed:9,cps:479.7,srs:19.0,sos:9.8,winpct:.636,alert:false},
+  {rank:29,school:"UCLA",region:"East",seed:7,cps:462.8,srs:18.3,sos:11.6,winpct:.676,alert:false},
+  {rank:30,school:"NC State",region:"West",seed:11,cps:455.5,srs:18.0,sos:10.8,winpct:.606,alert:false},
+  {rank:31,school:"Miami (FL)",region:"West",seed:7,cps:455.2,srs:18.0,sos:7.3,winpct:.758,alert:false},
+  {rank:32,school:"Saint Mary's (CA)",region:"South",seed:7,cps:452.6,srs:17.9,sos:5.6,winpct:.844,alert:false},
+  {rank:33,school:"Utah State",region:"West",seed:9,cps:439.9,srs:17.4,sos:6.5,winpct:.824,alert:false},
+  {rank:34,school:"Southern Methodist",region:"Midwest",seed:11,cps:438.1,srs:17.3,sos:10.7,winpct:.606,alert:false},
+  {rank:35,school:"Saint Louis",region:"Midwest",seed:9,cps:436.9,srs:17.3,sos:1.5,winpct:.848,alert:false},
+  {rank:36,school:"Clemson",region:"South",seed:8,cps:430.2,srs:17.0,sos:9.6,winpct:.706,alert:false},
+  {rank:37,school:"Texas A&M",region:"South",seed:10,cps:425.4,srs:16.8,sos:8.6,winpct:.656,alert:false},
+  {rank:38,school:"Villanova",region:"West",seed:8,cps:412.8,srs:16.3,sos:9.9,winpct:.750,alert:false},
+  {rank:39,school:"Texas",region:"West",seed:11,cps:410.5,srs:16.2,sos:10.3,winpct:.563,alert:false},
+  {rank:40,school:"Santa Clara",region:"Midwest",seed:10,cps:402.4,srs:15.9,sos:6.1,winpct:.765,alert:false},
+  {rank:41,school:"TCU",region:"East",seed:9,cps:400.4,srs:15.8,sos:9.5,winpct:.667,alert:false},
+  {rank:42,school:"UCF",region:"East",seed:10,cps:338.0,srs:13.3,sos:10.8,winpct:.656,alert:false},
+  {rank:43,school:"Missouri",region:"West",seed:10,cps:332.5,srs:13.1,sos:8.8,winpct:.625,alert:false},
+  {rank:44,school:"Virginia Commonwealth",region:"South",seed:11,cps:331.9,srs:13.1,sos:3.0,winpct:.788,alert:false},
+  {rank:45,school:"South Florida",region:"East",seed:11,cps:330.1,srs:13.0,sos:2.4,winpct:.750,alert:false},
+  {rank:46,school:"Akron",region:"Midwest",seed:12,cps:228.7,srs:9.0,sos:-3.3,winpct:.853,alert:false},
+  {rank:47,school:"Northern Iowa",region:"East",seed:12,cps:216.2,srs:8.5,sos:1.5,winpct:.657,alert:false},
+  {rank:48,school:"McNeese State",region:"South",seed:12,cps:198.9,srs:7.8,sos:-2.0,winpct:.848,alert:false},
+  {rank:49,school:"High Point",region:"West",seed:12,cps:173.1,srs:6.8,sos:-7.9,winpct:.882,alert:false},
+  {rank:50,school:"Miami (OH)",region:"Midwest",seed:11,cps:138.1,srs:5.4,sos:-5.5,winpct:.969,alert:false},
+  {rank:51,school:"Hawaii",region:"West",seed:13,cps:126.0,srs:4.9,sos:-3.6,winpct:.750,alert:false},
+  {rank:52,school:"Hofstra",region:"Midwest",seed:13,cps:116.2,srs:4.5,sos:-2.5,winpct:.706,alert:false},
+  {rank:53,school:"California Baptist",region:"East",seed:13,cps:66.1,srs:2.5,sos:-2.9,winpct:.750,alert:false},
+  {rank:54,school:"North Dakota State",region:"East",seed:14,cps:65.7,srs:2.5,sos:-5.8,winpct:.794,alert:false},
+  {rank:55,school:"Kennesaw State",region:"West",seed:14,cps:6.4,srs:0.1,sos:-2.0,winpct:.618,alert:false},
+  {rank:56,school:"Wright State",region:"Midwest",seed:14,cps:5.7,srs:0.1,sos:-4.4,winpct:.676,alert:false},
+  {rank:57,school:"Idaho",region:"South",seed:15,cps:3.5,srs:0.0,sos:-2.7,winpct:.600,alert:false},
+  {rank:58,school:"Troy",region:"South",seed:13,cps:-16.6,srs:-0.8,sos:-4.6,winpct:.667,alert:false},
+  {rank:59,school:"Pennsylvania",region:"South",seed:14,cps:-18.9,srs:-0.9,sos:-2.0,winpct:.607,alert:false},
+  {rank:60,school:"Furman",region:"East",seed:15,cps:-77.1,srs:-3.2,sos:-6.1,winpct:.647,alert:false},
+  {rank:61,school:"Queens (NC)",region:"West",seed:15,cps:-79.7,srs:-3.3,sos:-5.0,winpct:.618,alert:false},
+  {rank:62,school:"Siena",region:"East",seed:16,cps:-105.2,srs:-4.3,sos:-9.2,winpct:.676,alert:false},
+  {rank:63,school:"Maryland-Baltimore County",region:"Midwest",seed:16,cps:-108.1,srs:-4.4,sos:-11.9,winpct:.750,alert:false},
+  {rank:64,school:"Tennessee State",region:"Midwest",seed:15,cps:-109.6,srs:-4.5,sos:-8.7,winpct:.719,alert:false},
+  {rank:65,school:"Howard",region:"Midwest",seed:16,cps:-112.8,srs:-4.6,sos:-11.8,winpct:.697,alert:false},
+  {rank:66,school:"Long Island University",region:"West",seed:16,cps:-120.0,srs:-4.9,sos:-7.9,winpct:.706,alert:false},
+  {rank:67,school:"Lehigh",region:"South",seed:16,cps:-230.2,srs:-9.3,sos:-7.0,winpct:.529,alert:false},
+  {rank:68,school:"Prairie View",region:"South",seed:16,cps:-315.3,srs:-12.7,sos:-9.9,winpct:.514,alert:false},
+];
+
+const regionColors = {East:'#74b9ff',West:'#55efc4',Midwest:'#fdcb6e',South:'#fd79a8'};
+
+// Populate table
+const tbody = document.getElementById('rankTable');
+teams.forEach(t => {
+  const sc = t.seed===1?'s1':t.seed===2?'s2':t.seed===3?'s3':'';
+  const bar = Math.max(4, Math.round((t.cps + 320) / 1150 * 160));
+  const note = t.alert ? '<span style="background:rgba(233,69,96,0.15);border:1px solid rgba(233,69,96,0.5);color:#e94560;border-radius:5px;padding:2px 8px;font-size:11px">⚠ Upset Alert</span>'
+    : t.over ? '<span class="over-badge">Overseeded</span>' : '';
+  tbody.innerHTML += `<tr>
+    <td class="rank-num ${t.rank<=3?'top3':''}">${t.rank}</td>
+    <td class="school-name">${t.school}</td>
+    <td style="color:${regionColors[t.region]};font-size:12px">${t.region}</td>
+    <td><span class="seed-badge ${sc}">${t.seed}</span></td>
+    <td>
+      <div class="cps-bar-wrap">
+        <div class="cps-bar" style="width:${bar}px"></div>
+        <span class="cps-val">${t.cps.toFixed(1)}</span>
+      </div>
+    </td>
+    <td style="color:var(--muted)">${t.srs}</td>
+    <td style="color:var(--muted)">${t.sos}</td>
+    <td style="color:var(--muted)">${(t.winpct*100).toFixed(1)}%</td>
+    <td>${note}</td>
+  </tr>`;
+});
+
+// BAR CHART — Top 20
+const top20 = teams.slice(0,20);
+new Chart(document.getElementById('barChart'), {
+  type: 'bar',
+  data: {
+    labels: top20.map(t => t.school),
+    datasets: [{
+      data: top20.map(t => t.cps),
+      backgroundColor: top20.map(t => regionColors[t.region] + 'bb'),
+      borderColor: top20.map(t => regionColors[t.region]),
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` CPS: ${ctx.raw.toFixed(1)} · ${teams[ctx.dataIndex].region} ${teams[ctx.dataIndex].seed}-seed`
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#8892a4', font: { size: 10 } }
+      },
+      y: {
+        grid: { display: false },
+        ticks: { color: '#eaeaea', font: { size: 11 } }
+      }
+    }
+  }
+});
+
+// SCATTER — Seed vs CPS Rank
+const scatterData = teams.map(t => ({
+  x: t.seed,
+  y: t.rank,
+  school: t.school,
+  region: t.region,
+  alert: t.alert,
+  over: t.over
+}));
+
+new Chart(document.getElementById('scatterChart'), {
+  type: 'scatter',
+  data: {
+    datasets: [{
+      label: 'Teams',
+      data: scatterData,
+      backgroundColor: scatterData.map(d =>
+        d.alert ? '#e94560cc' : d.over ? '#fdcb6ecc' : 'rgba(100,150,255,0.5)'
+      ),
+      pointRadius: scatterData.map(d => d.alert || d.over ? 8 : 5),
+      pointHoverRadius: 10,
+    }, {
+      label: 'Perfect line',
+      data: [{x:1,y:1},{x:16,y:68}],
+      type: 'line',
+      borderColor: 'rgba(255,255,255,0.15)',
+      borderDash: [4,4],
+      pointRadius: 0,
+      fill: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => {
+            const d = ctx.raw;
+            return ` ${d.school} · Seed ${d.x} · CPS Rank #${d.y}${d.alert?' ⚠️':''}`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'Tournament Seed', color: '#8892a4', font:{size:11} },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#8892a4', font:{size:10} },
+        min: 0, max: 17
+      },
+      y: {
+        title: { display: true, text: 'CPS Rank (1=best)', color: '#8892a4', font:{size:11} },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#8892a4', font:{size:10} },
+        reverse: false,
+        min: 0, max: 70
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
